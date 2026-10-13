@@ -3,11 +3,22 @@
 ## Setup
 
 ```bash
-git clone --branch dev https://github.com/bethington/ghidra-mcp.git
+rm -rf ./ghidra-mcp
+
+git clone --branch dev \
+  https://github.com/bethington/ghidra-mcp.git
+
 mkdir -p binaries
-printf 'GHIDRA_MCP_AUTH_TOKEN=%s\n' "$(openssl rand -hex 32)" > .env
+
+printf 'GHIDRA_MCP_AUTH_TOKEN=%s\n' \
+  "$(openssl rand -hex 32)" > .env
+  
+printf 'GHIDRA_MCP_INBOUND_TOKEN=%s\n' \
+  "$(openssl rand -hex 32)" >> .env
+  
 chmod 600 .env
-docker compose up -d --build
+
+(source .env; docker compose up -d --build)
 ```
 
 Place a local binary in `binaries/`. Ghidra sees it at `/binaries/<filename>`.
