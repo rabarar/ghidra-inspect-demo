@@ -1,0 +1,5 @@
+.env
+binaries/*
+!binaries/.gitkeep
+
+ghidra-mcp

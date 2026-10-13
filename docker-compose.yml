@@ -1,0 +1,69 @@
+name: ghidra-inspector-demo
+
+services:
+  ghidra-mcp:
+    build:
+      context: ./ghidra-mcp
+      dockerfile: docker/Dockerfile
+    image: ghidra-mcp-headless:local
+    ports:
+      - "127.0.0.1:8089:8089"
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - ghidra-data:/data
+      - ghidra-projects:/projects
+      - ./binaries:/binaries:ro
+    environment:
+      GHIDRA_MCP_PORT: "8089"
+      GHIDRA_MCP_AUTH_TOKEN: ${GHIDRA_MCP_AUTH_TOKEN:?Set GHIDRA_MCP_AUTH_TOKEN in .env}
+      JAVA_OPTS: "-Xmx4g -XX:+UseG1GC"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8089/mcp/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+    restart: unless-stopped
+
+  bridge:
+    build:
+      context: ./ghidra-mcp
+      dockerfile: docker/Dockerfile.bridge
+    image: ghidra-mcp-bridge:local
+    network_mode: "service:ghidra-mcp"
+    depends_on:
+      ghidra-mcp:
+        condition: service_healthy
+    environment:
+      GHIDRA_MCP_URL: http://127.0.0.1:8089
+      GHIDRA_MCP_AUTH_TOKEN: ${GHIDRA_MCP_AUTH_TOKEN:?required}
+      GHIDRA_MCP_INBOUND_TOKEN: ${GHIDRA_MCP_AUTH_TOKEN:?required}
+      GHIDRA_MCP_ALLOWED_HOSTS: ghidra-mcp,localhost,127.0.0.1
+      GHIDRA_MCP_LAZY: "0"
+    restart: unless-stopped
+
+  inspector:
+    image: ghcr.io/modelcontextprotocol/inspector:latest
+
+    # Override the image's default --web argument
+    command: []
+
+    environment:
+      HOST: "0.0.0.0"
+      MCP_PROXY_FULL_ADDRESS: "http://127.0.0.1:6278"
+      MCP_INSPECTOR_SECRET_STORE: "memory"
+    ports:
+      - "127.0.0.1:6274:6274"
+      - "127.0.0.1:6275:6275"
+      - "127.0.0.1:6278:6278"
+    volumes:
+      - inspector-data:/home/node/.mcp-inspector
+    depends_on:
+      bridge:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  ghidra-data:
+  ghidra-projects:
+  inspector-data:
