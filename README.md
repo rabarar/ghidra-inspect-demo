@@ -2,6 +2,8 @@
 
 ## Setup
 
+Run `startup.sh` which does: 
+
 ```bash
 rm -rf ./ghidra-mcp
 
